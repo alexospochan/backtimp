@@ -1,3 +1,4 @@
+
 import mongoose from "mongoose";
 
 const projectSchema = new mongoose.Schema({
@@ -12,6 +13,7 @@ const projectSchema = new mongoose.Schema({
   lonInicio: { type: Number, required: true },
   latFinal: { type: Number, required: true },
   lonFinal: { type: Number, required: true },
+  jefeCuadrillaId: { type: mongoose.Schema.Types.ObjectId, ref: "Usuario", required: false }, // <== Aquí
   createdAt: { type: Date, default: Date.now },
 });
 

@@ -1,9 +1,10 @@
 import express from "express";
-import { createProject, getProjects } from "../controllers/projectController.js";
+import { createProject, getProjects, getProjectById } from "../controllers/projectController.js";
 
 const router = express.Router();
 
 router.post("/", createProject);
-router.get("/", getProjects);
+router.get("/", getProjects);  // acepta query ?jefeCuadrillaId=...
+router.get("/:id", getProjectById);
 
 export default router;

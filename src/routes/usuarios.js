@@ -140,4 +140,18 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
+// ----> AÑADIDO: Obtener usuario por ID (con proyecto poblado)
+router.get("/:id", async (req, res) => {
+  try {
+    const usuario = await Usuario.findById(req.params.id).populate("proyectoId", "nombre ciudadInicio ciudadFinal kmInicio kmFinal latInicio lonInicio latFinal lonFinal manager");
+    if (!usuario) {
+      return res.status(404).json({ message: "Usuario no encontrado" });
+    }
+    res.json(usuario);
+  } catch (error) {
+    console.error("Error al obtener usuario por ID:", error);
+    res.status(500).json({ message: "Error al obtener usuario", error });
+  }
+});
+
 export default router;

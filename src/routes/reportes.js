@@ -4,7 +4,7 @@ import Reporte from "../models/Reporte.js";
 
 const router = express.Router();
 
-// Obtener todos los reportes (para administrador)
+// Obtener todos los reportes (admin)
 router.get("/", async (req, res) => {
   try {
     const reportes = await Reporte.find()
@@ -17,7 +17,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-// Obtener reportes por proyecto (para jefe de cuadrilla)
+// Obtener reportes por proyecto (jefe)
 router.get("/proyecto/:proyectoId", async (req, res) => {
   try {
     const { proyectoId } = req.params;
@@ -32,11 +32,11 @@ router.get("/proyecto/:proyectoId", async (req, res) => {
     res.json(reportes);
   } catch (error) {
     console.error("Error al obtener reportes por proyecto:", error);
-    res.status(500).json([]); // devolver array vacío para evitar errores en front
+    res.status(500).json([]);
   }
 });
 
-// Obtener un reporte por ID
+// Obtener reporte por ID
 router.get("/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -59,10 +59,9 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// Crear nuevo reporte (por jefe de cuadrilla)
+// Crear nuevo reporte (jefe)
 router.post("/", async (req, res) => {
   try {
-    // Validar datos obligatorios
     const {
       categoria,
       importancia,
@@ -70,10 +69,6 @@ router.post("/", async (req, res) => {
       usuario,
       proyectoId,
       imagenes,
-      comentario,
-      notificacion,
-      comentarioLeido,
-      leidoPor,
       fecha,
     } = req.body;
 
@@ -81,7 +76,6 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ message: "Faltan campos obligatorios" });
     }
 
-    // Validar ObjectId válido para proyectoId
     if (!mongoose.Types.ObjectId.isValid(proyectoId)) {
       return res.status(400).json({ message: "ID de proyecto inválido" });
     }
@@ -93,10 +87,10 @@ router.post("/", async (req, res) => {
       usuario,
       proyectoId,
       imagenes: imagenes || [],
-      comentario: comentario || "",
-      notificacion: notificacion || false,
-      comentarioLeido: comentarioLeido || false,
-      leidoPor: leidoPor || [],
+      comentarioAdmin: "",     // Por defecto sin comentario admin
+      comentarioLeido: false,
+      notificacion: false,
+      leidoPor: [],
       fecha: fecha ? new Date(fecha) : new Date(),
     });
 
@@ -108,7 +102,7 @@ router.post("/", async (req, res) => {
   }
 });
 
-// Actualizar reporte (por administrador)
+// Actualizar reporte (admin) — para actualizar comentarioAdmin y otras cosas
 router.put("/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -119,10 +113,11 @@ router.put("/:id", async (req, res) => {
 
     const dataActualizar = { ...req.body };
 
-    // Si se actualiza el comentario, resetear comentarioLeido y leidoPor
-    if (dataActualizar.comentario !== undefined) {
+    // Si se actualiza comentarioAdmin, reiniciar flags y leidoPor
+    if (dataActualizar.comentarioAdmin !== undefined) {
       dataActualizar.comentarioLeido = false;
       dataActualizar.leidoPor = [];
+      dataActualizar.notificacion = true;
     }
 
     const reporteActualizado = await Reporte.findByIdAndUpdate(id, dataActualizar, {
@@ -140,18 +135,14 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-// Marcar comentario como leído (por jefe de cuadrilla)
+// Marcar comentario como leído (jefe)
 router.put("/:id/comentario-leido", async (req, res) => {
   try {
     const { id } = req.params;
     const { userId } = req.body;
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: "ID de reporte inválido" });
-    }
-
-    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
-      return res.status(400).json({ message: "userId inválido o faltante" });
+    if (!mongoose.Types.ObjectId.isValid(id) || !mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: "ID inválido" });
     }
 
     const reporte = await Reporte.findById(id);
@@ -159,11 +150,8 @@ router.put("/:id/comentario-leido", async (req, res) => {
       return res.status(404).json({ message: "Reporte no encontrado" });
     }
 
-    const yaLeido = reporte.leidoPor.some(
-      (idUser) => idUser.toString() === userId
-    );
-
-    if (!yaLeido) {
+    // Agregar usuario a leidoPor solo si no está
+    if (!reporte.leidoPor.some((u) => u.toString() === userId)) {
       reporte.leidoPor.push(userId);
     }
 
@@ -186,7 +174,7 @@ router.put("/:id/comentario-leido", async (req, res) => {
   }
 });
 
-// Eliminar reporte (solo administrador)
+// Eliminar reporte (admin)
 router.delete("/:id", async (req, res) => {
   try {
     const { id } = req.params;

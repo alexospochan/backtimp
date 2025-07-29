@@ -12,14 +12,11 @@ const reporteSchema = new mongoose.Schema({
       coordenadas: String,
     },
   ],
-  comentario: { type: String, default: "" },
-  notificacion: { type: Boolean, default: false },
-  comentarioLeido: { type: Boolean, default: false },
-
+  comentarioAdmin: { type: String, default: "" },       // Comentario enviado por admin
+  notificacion: { type: Boolean, default: false },      // Si hay notificación de nuevo comentario
+  comentarioLeido: { type: Boolean, default: false },   // Si el jefe lo leyó
   proyectoId: { type: mongoose.Schema.Types.ObjectId, ref: "Project", required: true },
-
-
-  leidoPor: [{ type: mongoose.Schema.Types.ObjectId, ref: "Usuario" }],
+  leidoPor: [{ type: mongoose.Schema.Types.ObjectId, ref: "Usuario" }],  // Usuarios que leyeron comentario
 });
 
 const Reporte = mongoose.model("Reporte", reporteSchema);

@@ -9,7 +9,7 @@ const projectSchema = new mongoose.Schema({
   ciudadInicio: { type: String, required: true },
   ciudadFinal: { type: String, required: true },
   descripcion: { type: String },
-  latInicio: { type: Number, required: true },
+  latInicio: { type: Number, required: true },  
   lonInicio: { type: Number, required: true },
   latFinal: { type: Number, required: true },
   lonFinal: { type: Number, required: true },

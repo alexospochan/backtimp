@@ -32,7 +32,7 @@ router.get("/proyecto/:proyectoId", async (req, res) => {
     res.json(reportes);
   } catch (error) {
     console.error("Error al obtener reportes por proyecto:", error);
-    res.status(500).json([]);
+    res.status(500).json({ message: "Error al obtener reportes por proyecto" });
   }
 });
 
@@ -87,7 +87,7 @@ router.post("/", async (req, res) => {
       usuario,
       proyectoId,
       imagenes: imagenes || [],
-      comentarioAdmin: "",     // Por defecto sin comentario admin
+      comentarioAdmin: "", // Por defecto sin comentario admin
       comentarioLeido: false,
       notificacion: false,
       leidoPor: [],
@@ -141,8 +141,14 @@ router.put("/:id/comentario-leido", async (req, res) => {
     const { id } = req.params;
     const { userId } = req.body;
 
-    if (!mongoose.Types.ObjectId.isValid(id) || !mongoose.Types.ObjectId.isValid(userId)) {
-      return res.status(400).json({ message: "ID inválido" });
+    // Validar id del reporte
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "ID de reporte inválido" });
+    }
+
+    // Validar userId solo si se envía (puede ser opcional dependiendo del caso)
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: "ID de usuario inválido o faltante" });
     }
 
     const reporte = await Reporte.findById(id);
@@ -150,8 +156,9 @@ router.put("/:id/comentario-leido", async (req, res) => {
       return res.status(404).json({ message: "Reporte no encontrado" });
     }
 
-    // Agregar usuario a leidoPor solo si no está
-    if (!reporte.leidoPor.some((u) => u.toString() === userId)) {
+    // Agregar usuario a leidoPor solo si no está ya
+    const userIdStr = userId.toString();
+    if (!reporte.leidoPor.some((u) => u.toString() === userIdStr)) {
       reporte.leidoPor.push(userId);
     }
 

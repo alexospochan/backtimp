@@ -154,7 +154,11 @@ router.put("/:id/comentario-leido", async (req, res) => {
       return res.status(404).json({ message: "Proyecto no encontrado" });
     }
 
-    if (!proyecto.jefeCuadrillaId || proyecto.jefeCuadrillaId.toString() !== userId) {
+    // Validación para múltiples jefes de cuadrilla:
+    if (
+      !proyecto.jefesCuadrillaIds ||
+      !proyecto.jefesCuadrillaIds.some(jefeId => jefeId.toString() === userId)
+    ) {
       return res.status(403).json({ message: "No tienes permiso para marcar como leído este comentario" });
     }
 

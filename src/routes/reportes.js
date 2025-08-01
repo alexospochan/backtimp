@@ -1,6 +1,7 @@
 import express from "express";
 import mongoose from "mongoose";
 import Reporte from "../models/Reporte.js";
+import Proyecto from "../models/Project.js";
 
 const router = express.Router();
 
@@ -12,7 +13,6 @@ router.get("/", async (req, res) => {
       .populate("leidoPor");
     res.json(reportes);
   } catch (error) {
-    console.error("Error al obtener reportes:", error);
     res.status(500).json({ message: "Error al obtener reportes" });
   }
 });
@@ -21,8 +21,8 @@ router.get("/", async (req, res) => {
 router.get("/proyecto/:proyectoId", async (req, res) => {
   try {
     const { proyectoId } = req.params;
-    if (!proyectoId || !mongoose.Types.ObjectId.isValid(proyectoId)) {
-      return res.status(400).json({ message: "ID de proyecto inválido o faltante" });
+    if (!mongoose.Types.ObjectId.isValid(proyectoId)) {
+      return res.status(400).json({ message: "ID de proyecto inválido" });
     }
 
     const reportes = await Reporte.find({ proyectoId })
@@ -31,7 +31,6 @@ router.get("/proyecto/:proyectoId", async (req, res) => {
 
     res.json(reportes);
   } catch (error) {
-    console.error("Error al obtener reportes por proyecto:", error);
     res.status(500).json({ message: "Error al obtener reportes por proyecto" });
   }
 });
@@ -54,7 +53,6 @@ router.get("/:id", async (req, res) => {
 
     res.json(reporte);
   } catch (error) {
-    console.error("Error al obtener reporte:", error);
     res.status(500).json({ message: "Error al obtener reporte" });
   }
 });
@@ -87,7 +85,7 @@ router.post("/", async (req, res) => {
       usuario,
       proyectoId,
       imagenes: imagenes || [],
-      comentarioAdmin: "", // Por defecto sin comentario admin
+      comentarioAdmin: "",
       comentarioLeido: false,
       notificacion: false,
       leidoPor: [],
@@ -97,12 +95,11 @@ router.post("/", async (req, res) => {
     await nuevoReporte.save();
     res.status(201).json(nuevoReporte);
   } catch (error) {
-    console.error("Error al guardar reporte:", error);
     res.status(500).json({ message: "Error al guardar reporte" });
   }
 });
 
-// Actualizar reporte (admin) — para actualizar comentarioAdmin y otras cosas
+// Actualizar reporte (admin)
 router.put("/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -113,7 +110,6 @@ router.put("/:id", async (req, res) => {
 
     const dataActualizar = { ...req.body };
 
-    // Si se actualiza comentarioAdmin, reiniciar flags y leidoPor
     if (dataActualizar.comentarioAdmin !== undefined) {
       dataActualizar.comentarioLeido = false;
       dataActualizar.leidoPor = [];
@@ -130,23 +126,20 @@ router.put("/:id", async (req, res) => {
 
     res.json(reporteActualizado);
   } catch (error) {
-    console.error("Error al actualizar reporte:", error);
     res.status(500).json({ message: "Error al actualizar reporte" });
   }
 });
 
-// Marcar comentario como leído (jefe)
+// Marcar comentario como leído (solo jefe de cuadrilla del proyecto)
 router.put("/:id/comentario-leido", async (req, res) => {
   try {
     const { id } = req.params;
     const { userId } = req.body;
 
-    // Validar id del reporte
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ message: "ID de reporte inválido" });
     }
 
-    // Validar userId solo si se envía (puede ser opcional dependiendo del caso)
     if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
       return res.status(400).json({ message: "ID de usuario inválido o faltante" });
     }
@@ -156,9 +149,16 @@ router.put("/:id/comentario-leido", async (req, res) => {
       return res.status(404).json({ message: "Reporte no encontrado" });
     }
 
-    // Agregar usuario a leidoPor solo si no está ya
-    const userIdStr = userId.toString();
-    if (!reporte.leidoPor.some((u) => u.toString() === userIdStr)) {
+    const proyecto = await Proyecto.findById(reporte.proyectoId);
+    if (!proyecto) {
+      return res.status(404).json({ message: "Proyecto no encontrado" });
+    }
+
+    if (!proyecto.jefeCuadrillaId || proyecto.jefeCuadrillaId.toString() !== userId) {
+      return res.status(403).json({ message: "No tienes permiso para marcar como leído este comentario" });
+    }
+
+    if (!reporte.leidoPor.includes(userId)) {
       reporte.leidoPor.push(userId);
     }
 
@@ -171,17 +171,13 @@ router.put("/:id/comentario-leido", async (req, res) => {
       .populate("proyectoId")
       .populate("leidoPor");
 
-    res.json({
-      message: "Comentario marcado como leído",
-      reporte: reporteActualizado,
-    });
+    res.json({ message: "Comentario marcado como leído", reporte: reporteActualizado });
   } catch (error) {
-    console.error("Error al marcar comentario como leído:", error);
     res.status(500).json({ message: "Error al marcar comentario como leído" });
   }
 });
 
-// Eliminar reporte (admin)
+// Eliminar reporte
 router.delete("/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -190,15 +186,13 @@ router.delete("/:id", async (req, res) => {
       return res.status(400).json({ message: "ID de reporte inválido" });
     }
 
-    const reporteEliminado = await Reporte.findByIdAndDelete(id);
-
-    if (!reporteEliminado) {
+    const eliminado = await Reporte.findByIdAndDelete(id);
+    if (!eliminado) {
       return res.status(404).json({ message: "Reporte no encontrado" });
     }
 
     res.json({ message: "Reporte eliminado correctamente" });
   } catch (error) {
-    console.error("Error al eliminar reporte:", error);
     res.status(500).json({ message: "Error al eliminar reporte" });
   }
 });

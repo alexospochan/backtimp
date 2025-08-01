@@ -17,10 +17,9 @@ export const getProjects = async (req, res) => {
 
     let proyectos;
     if (jefeCuadrillaId) {
-      // Solo proyectos asignados a este jefe de cuadrilla
-      proyectos = await Project.find({ jefeCuadrillaId });
+      // Buscar proyectos donde el jefe esté en el array jefesCuadrillaIds
+      proyectos = await Project.find({ jefesCuadrillaIds: jefeCuadrillaId });
     } else {
-      // Todos los proyectos (para admin)
       proyectos = await Project.find();
     }
 
